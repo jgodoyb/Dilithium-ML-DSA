@@ -1,0 +1,1 @@
+"""Pre-hash usage example."""
