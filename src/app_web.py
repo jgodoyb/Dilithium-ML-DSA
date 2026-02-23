@@ -1,14 +1,3 @@
-"""
-Q-Proof System — Web Interface v2 (app_web_v2.py)
-==================================================
-Versión mejorada del portal web modularizado.
-Todo el código está ahora subdividido en la carpeta `src/web/`.
-
-Uso:
-    cd src
-    streamlit run app_web_v2.py
-"""
-
 import os
 import sys
 

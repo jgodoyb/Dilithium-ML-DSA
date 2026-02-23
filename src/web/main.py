@@ -1,6 +1,3 @@
-"""
-Punto de entrada principal para la aplicación web Streamlit.
-"""
 import streamlit as st
 
 from .config import configurar_pagina

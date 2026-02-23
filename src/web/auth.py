@@ -1,6 +1,3 @@
-"""
-Lógica para el manejo de sesiones de usuario y registro.
-"""
 import os
 import re
 import datetime

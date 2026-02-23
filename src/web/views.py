@@ -284,9 +284,9 @@ def pagina_perfil() -> None:
             f'letter-spacing:0.3px;">{st.session_state.usuario}</div>'
             f'<div style="font-size:1rem;color:#94a3b8;margin:2px 0 6px;">{fila["nombre_completo"]}</div>'
             f'<div style="font-size:0.82rem;color:#5eead4;margin-bottom:4px;">'
-            f'📬 {fila["correo"]}</div>'
+            f'{fila["correo"]}</div>'
             f'<div style="font-size:0.8rem;color:#64748b;">'
-            f'🎂 {fila["fecha_nacimiento"]}  ·  📅 Miembro desde {(fila["creado_en"] or "")[:10]}'
+            f'{fila["fecha_nacimiento"]}  ·  Miembro desde {(fila["creado_en"] or "")[:10]}'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -307,7 +307,7 @@ def pagina_perfil() -> None:
     st.markdown("---")
 
     # ── EDITAR DATOS ────────────────────────────────────────────────────────
-    with st.expander("✏️ Editar datos personales", expanded=False):
+    with st.expander("Editar datos personales", expanded=False):
         with st.form("formulario_editar_perfil"):
             col_a, col_b = st.columns(2)
             with col_a:
@@ -350,7 +350,7 @@ def pagina_perfil() -> None:
                 st.error(f"❌ {mensaje}")
 
     # ── CLAVE PÚBLICA ──────────────────────────────────────────────────────────
-    with st.expander("🔑 Clave pública ML-DSA", expanded=False):
+    with st.expander("Clave pública ML-DSA", expanded=False):
         cp_hex = bytes_cp.hex()
         st.markdown(
             '| Campo | Valor |\n|---|---|\n'
@@ -376,7 +376,7 @@ def pagina_dashboard() -> None:
         st.title(f"Bienvenido, {st.session_state.usuario}")
     with col_salir:
         st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-        st.button("🚪 Cerrar Sesión", on_click=cerrar_sesion, type="primary",
+        st.button("Cerrar Sesión", on_click=cerrar_sesion, type="primary",
                   use_container_width=True, key="salir_dashboard")
     st.markdown("---")
 
@@ -408,7 +408,7 @@ def pagina_dashboard() -> None:
 
     st.markdown("---")
 
-    with st.expander("📖 Especificación ML-DSA / FIPS 204", expanded=False):
+    with st.expander("Especificación ML-DSA / FIPS 204", expanded=False):
         st.markdown(
             "Consulta la especificación completa del algoritmo: "
             "[crystals-dilithium.lovable.app](https://crystals-dilithium.lovable.app/)"

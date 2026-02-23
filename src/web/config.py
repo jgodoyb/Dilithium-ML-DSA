@@ -14,7 +14,7 @@ SMTP_PASS = os.environ.get("QPROOF_SMTP_PASS", "uhydihdhjzxdezmz")   # ← pon t
 
 def configurar_pagina():
     st.set_page_config(
-        page_title="Q-Proof Portal",
+        page_title="Q-Proof Systems",
         page_icon="🛡️",
         layout="centered",
         initial_sidebar_state="expanded",
