@@ -45,7 +45,16 @@ cd "Q-Proof System"
 pip install -r requirements.txt
 ```
 
-### 3. Ejecutar la Aplicación Web
+### 3. Configurar Variables de Entorno
+
+El sistema de correos requiere credenciales SMTP seguras. En la raíz del proyecto encontrarás un archivo llamado `.env.example`.
+
+1. Crea una copia de `.env.example` y renómbrala a `.env`.
+2. Abre el nuevo archivo `.env` y sustituye los valores de `QPROOF_SMTP_USER` y `QPROOF_SMTP_PASS` por tus credenciales reales (recomendamos usar *Contraseñas de Aplicación* de Google).
+
+*(Nota: El archivo `.env` está ignorado en Git por seguridad).*
+
+### 4. Ejecutar la Aplicación Web
 
 La aplicación de interfaz de usuario está desarrollada en Streamlit. Para levantar el servidor y abrir la aplicación en tu navegador, ejecuta el siguiente comando desde el directorio principal del proyecto:
 

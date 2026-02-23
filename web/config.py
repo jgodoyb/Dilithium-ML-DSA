@@ -5,12 +5,20 @@ import os
 import streamlit as st
 
 # ===========================================================================
-# CONFIGURACIÓN DE CORREO (via env vars; edita aquí si prefieres hardcodearlo)
+# CONFIGURACIÓN DE CORREO (via env vars)
 # ===========================================================================
+# Intentar cargar variables desde un archivo .env si existe (requiere python-dotenv)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 SMTP_HOST = os.environ.get("QPROOF_SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("QPROOF_SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("QPROOF_SMTP_USER", "jgodoyb19@gmail.com")   # ← pon tu email aquí
-SMTP_PASS = os.environ.get("QPROOF_SMTP_PASS", "uhydihdhjzxdezmz")   # ← pon tu App Password aquí
+# Valores por defecto vacíos para no exponer correos reales en el código base
+SMTP_USER = os.environ.get("QPROOF_SMTP_USER", "")
+SMTP_PASS = os.environ.get("QPROOF_SMTP_PASS", "")
 
 def configurar_pagina():
     st.set_page_config(

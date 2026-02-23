@@ -12,3 +12,6 @@ cryptography>=42.0.0
 # --- Criptografía Post-Cuántica (ML-DSA / FIPS 204) ---
 # (Implementación local en el módulo 'mldsa', basada
 # estrictamente en la biblioteca estándar de Python)
+
+# --- Gestión de Entorno (Credenciales Seguras) ---
+python-dotenv>=1.0.0
