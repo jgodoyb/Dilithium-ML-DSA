@@ -79,7 +79,6 @@ def cerrar_sesion() -> None:
     for clave in ("sesion_iniciada", "usuario", "clave_fernet"):
         st.session_state[clave] = False if clave == "sesion_iniciada" else ("" if clave == "usuario" else None)
     st.session_state["menu_activo"] = "Dashboard"
-    st.rerun()
 
 def _ir_al_dashboard() -> None:
     """Callback on_click — escribe ANTES del render siguiente."""
