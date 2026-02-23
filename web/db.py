@@ -2,7 +2,15 @@
 Lógica para la conexión y manipulación de la Base de Datos SQLite.
 """
 import os
-import sqlite3
+try:
+    import sqlcipher3 as sqlite3
+except ImportError:
+    import sqlite3
+
+from dotenv import load_dotenv
+
+load_dotenv()
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 # DB ubicada en el directorio 'src', un nivel por encima de 'web'
 _DIR_WEB = os.path.dirname(os.path.abspath(__file__))
@@ -32,6 +40,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
 
 def obtener_conexion() -> sqlite3.Connection:
     conexion = sqlite3.connect(RUTA_BD)
+    if DB_PASSWORD:
+        conexion.execute(f"PRAGMA key = '{DB_PASSWORD}';")
     conexion.row_factory = sqlite3.Row
     return conexion
 

@@ -1,7 +1,14 @@
 import os
 import sys
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ---------------------------------------------------------------------------
+
 # sys.path — garantiza que el módulo local (src) sea importable
 # ---------------------------------------------------------------------------
 _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
