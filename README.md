@@ -38,8 +38,8 @@ Asegúrate de tener instalado **Python 3.10** o superior en tu sistema.
 Se recomienda la creación de un entorno virtual (venv o conda) antes de instalar las dependencias.
 
 ```bash
-# Clonar o descargar el repositorio e ir a la carpeta src
-cd "Q-Proof System/src"
+# Clonar o descargar el repositorio e ir a la carpeta principal
+cd "Q-Proof System"
 
 # Instalar los paquetes requeridos
 pip install -r requirements.txt
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 ### 3. Ejecutar la Aplicación Web
 
-La aplicación de interfaz de usuario está desarrollada en Streamlit. Para levantar el servidor y abrir la aplicación en tu navegador, ejecuta el siguiente comando desde el directorio `src`:
+La aplicación de interfaz de usuario está desarrollada en Streamlit. Para levantar el servidor y abrir la aplicación en tu navegador, ejecuta el siguiente comando desde el directorio principal del proyecto:
 
 ```bash
 streamlit run app_web.py

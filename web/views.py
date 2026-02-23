@@ -526,7 +526,6 @@ def pagina_verificar() -> None:
                 f"✅ **LA FIRMA ES VÁLIDA.** "
                 f"El documento fue firmado por **{nombre_firmante}** y no ha sido alterado."
             )
-            st.balloons()
         else:
             st.error(
                 "❌ **LA FIRMA NO ES VÁLIDA.** "
