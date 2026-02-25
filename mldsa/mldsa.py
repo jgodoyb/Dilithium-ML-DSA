@@ -16,18 +16,18 @@ OID_SHAKE128 = bytes([0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02
 # =============================================================================
 # ALGORITMO 1: ML-DSA.KeyGen()
 # =============================================================================
-def keygen() -> tuple[bytes, bytes]:
+def keygen(level: str = "ML_DSA_65") -> tuple[bytes, bytes]:
     """Genera un par de claves (pk, sk)."""
     # 1: xi <- B^32 (Entropía aleatoria del sistema)
     xi = os.urandom(32)
     # 2-4: Manejo de errores de entropía (os.urandom lanzaría excepción si falla)
     # 5: return ML-DSA.KeyGen_internal(xi)
-    return keygen_internal(xi)
+    return keygen_internal(xi, level=level)
 
 # =============================================================================
 # ALGORITMO 2: ML-DSA.Sign(sk, M, ctx)
 # =============================================================================
-def sign(sk: bytes, M: bytes, ctx: bytes = b"") -> bytes:
+def sign(sk: bytes, M: bytes, ctx: bytes = b"", level: str = "ML_DSA_65") -> bytes:
     """Firma un mensaje M (variante pura)."""
     # 1-3: if |ctx| > 255 then return perpendicular
     if len(ctx) > 255:
@@ -40,12 +40,12 @@ def sign(sk: bytes, M: bytes, ctx: bytes = b"") -> bytes:
     m_prime = _int_to_byte(0) + _int_to_byte(len(ctx)) + ctx + M
     
     # 11: sigma <- ML-DSA.Sign_internal(sk, M', rnd)
-    return sign_internal(sk, m_prime, rnd)
+    return sign_internal(sk, m_prime, rnd, level=level)
 
 # =============================================================================
 # ALGORITMO 3: ML-DSA.Verify(pk, M, sigma, ctx)
 # =============================================================================
-def verify(pk: bytes, M: bytes, sigma: bytes, ctx: bytes = b"") -> bool:
+def verify(pk: bytes, M: bytes, sigma: bytes, ctx: bytes = b"", level: str = "ML_DSA_65") -> bool:
     """Verifica una firma (variante pura)."""
     # 1-3: if |ctx| > 255 then return perpendicular
     if len(ctx) > 255:
@@ -55,12 +55,12 @@ def verify(pk: bytes, M: bytes, sigma: bytes, ctx: bytes = b"") -> bool:
     m_prime = _int_to_byte(0) + _int_to_byte(len(ctx)) + ctx + M
     
     # 6: return ML-DSA.Verify_internal(pk, M', sigma)
-    return verify_internal(pk, m_prime, sigma)
+    return verify_internal(pk, m_prime, sigma, level=level)
 
 # =============================================================================
 # ALGORITMO 4: HashML-DSA.Sign(sk, M, ctx, PH)
 # =============================================================================
-def hash_sign(sk: bytes, M: bytes, ph_algo: str, ctx: bytes = b"") -> bytes:
+def hash_sign(sk: bytes, M: bytes, ph_algo: str, ctx: bytes = b"", level: str = "ML_DSA_65") -> bytes:
     """Firma un mensaje usando la variante Pre-Hash (HashML-DSA)."""
     # 1-3:
     if len(ctx) > 255:
@@ -88,12 +88,12 @@ def hash_sign(sk: bytes, M: bytes, ph_algo: str, ctx: bytes = b"") -> bytes:
     m_prime = _int_to_byte(1) + _int_to_byte(len(ctx)) + ctx + oid + ph_m
     
     # 24: sigma <- ML-DSA.Sign_internal(sk, M', rnd)
-    return sign_internal(sk, m_prime, rnd)
+    return sign_internal(sk, m_prime, rnd, level=level)
 
 # =============================================================================
 # ALGORITMO 5: HashML-DSA.Verify(pk, M, sigma, ctx, PH)
 # =============================================================================
-def hash_verify(pk: bytes, M: bytes, sigma: bytes, ph_algo: str, ctx: bytes = b"") -> bool:
+def hash_verify(pk: bytes, M: bytes, sigma: bytes, ph_algo: str, ctx: bytes = b"", level: str = "ML_DSA_65") -> bool:
     """Verifica una firma usando la variante Pre-Hash (HashML-DSA)."""
     # 1-3:
     if len(ctx) > 255:
@@ -117,4 +117,4 @@ def hash_verify(pk: bytes, M: bytes, sigma: bytes, ph_algo: str, ctx: bytes = b"
     m_prime = _int_to_byte(1) + _int_to_byte(len(ctx)) + ctx + oid + ph_m
     
     # 19: return ML-DSA.Verify_internal(pk, M', sigma)
-    return verify_internal(pk, m_prime, sigma)
+    return verify_internal(pk, m_prime, sigma, level=level)

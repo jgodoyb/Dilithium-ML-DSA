@@ -6,7 +6,7 @@ from mldsa.sampling.samplers import expand_mask, sample_in_ball
 from mldsa.decomposition.rounding import power2round, highbits, lowbits, make_hint, use_hint
 from mldsa.encoding.complex_structures import w1_encode
 from mldsa.encoding.serialization import pk_encode, pk_decode, sk_encode, sk_decode, sig_encode, sig_decode
-from mldsa.parameters.mldsa65 import ML_DSA_65
+from mldsa.parameters.registry import get_parameters
 from mldsa.constants import Q, D
 
 # Importaciones de TUS módulos de NTT
@@ -26,9 +26,10 @@ def _inf_norm(vector: list) -> int:
 # =============================================================================
 # ALGORITMO 6: ML-DSA.KeyGen_internal(xi)
 # =============================================================================
-def keygen_internal(xi: bytes) -> tuple[bytes, bytes]:
+def keygen_internal(xi: bytes, level: str = "ML_DSA_65") -> tuple[bytes, bytes]:
     # 0. Parámetros
-    k, l, eta = ML_DSA_65["k"], ML_DSA_65["l"], ML_DSA_65["eta"]
+    params = get_parameters(level)
+    k, l, eta = params["k"], params["l"], params["eta"]
     
     # 1: (rho, rho', K) <- H(xi || k || l, 128)
     seed_input = xi + integer_to_bytes(k, 1) + integer_to_bytes(l, 1)
@@ -69,13 +70,14 @@ def keygen_internal(xi: bytes) -> tuple[bytes, bytes]:
 # =============================================================================
 # ALGORITMO 7: ML-DSA.Sign_internal(sk, M', rnd)
 # =============================================================================
-def sign_internal(sk: bytes, m_prime: bytes, rnd: bytes) -> bytes:
+def sign_internal(sk: bytes, m_prime: bytes, rnd: bytes, level: str = "ML_DSA_65") -> bytes:
     # 0. Parámetros
-    k, l = ML_DSA_65["k"], ML_DSA_65["l"]
-    eta, tau = ML_DSA_65["eta"], ML_DSA_65["tau"]
-    gamma1, gamma2 = ML_DSA_65["gamma_1"], ML_DSA_65["gamma_2"]
-    omega = ML_DSA_65["omega"]
-    c_tilde_len = ML_DSA_65["c_tilde_bytes"]
+    params = get_parameters(level)
+    k, l = params["k"], params["l"]
+    eta, tau = params["eta"], params["tau"]
+    gamma1, gamma2 = params["gamma_1"], params["gamma_2"]
+    omega = params["omega"]
+    c_tilde_len = params["c_tilde_bytes"]
     beta = tau * eta
 
     # 1: (rho, K, tr, s1, s2, t0) <- skDecode(sk)
@@ -159,12 +161,13 @@ def sign_internal(sk: bytes, m_prime: bytes, rnd: bytes) -> bytes:
 # =============================================================================
 # ALGORITMO 8: ML-DSA.Verify_internal(pk, M', sigma)
 # =============================================================================
-def verify_internal(pk: bytes, m_prime: bytes, sigma: bytes) -> bool:
+def verify_internal(pk: bytes, m_prime: bytes, sigma: bytes, level: str = "ML_DSA_65") -> bool:
     # 0. Parámetros
-    k, l = ML_DSA_65["k"], ML_DSA_65["l"]
-    tau, eta = ML_DSA_65["tau"], ML_DSA_65["eta"]
-    gamma1, gamma2, omega = ML_DSA_65["gamma_1"], ML_DSA_65["gamma_2"], ML_DSA_65["omega"]
-    c_tilde_len = ML_DSA_65["c_tilde_bytes"]
+    params = get_parameters(level)
+    k, l = params["k"], params["l"]
+    tau, eta = params["tau"], params["eta"]
+    gamma1, gamma2, omega = params["gamma_1"], params["gamma_2"], params["omega"]
+    c_tilde_len = params["c_tilde_bytes"]
     beta = tau * eta
 
     # 1: (rho, t1) <- pkDecode(pk)

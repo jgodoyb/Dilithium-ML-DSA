@@ -12,7 +12,7 @@ from .ui import renderizar_tarjeta_unificada, html_fuerza_contrasena, cerrar_ses
 from .auth import (
     iniciar_sesion, registrar_usuario, restablecer_contrasena_con_correo, obtener_usuario_por_correo,
     obtener_perfil_usuario, actualizar_perfil_usuario, actualizar_foto_perfil,
-    obtener_clave_privada, obtener_clave_publica
+    obtener_clave_privada, obtener_clave_publica, registrar_auditoria_por_usuario
 )
 from .email_sender import enviar_correo_otp
 from .signature import construir_archivo_firma, analizar_archivo_firma, _ALGORITMO_PH, _CONTEXTO
@@ -49,14 +49,14 @@ def pagina_login() -> None:
                 st.warning("⚠️ Por favor completa todos los campos.")
             else:
                 with st.spinner("Autenticando…"):
-                    exito, clave_fernet = iniciar_sesion(input_usuario, input_contra)
+                    exito, clave_fernet, mensaje_error = iniciar_sesion(input_usuario, input_contra)
                 if exito:
                     st.session_state.sesion_iniciada = True
                     st.session_state.usuario         = input_usuario.strip()
                     st.session_state.clave_fernet    = clave_fernet
                     st.rerun()
                 else:
-                    st.error("❌ Credenciales incorrectas. Verifica tu usuario y contraseña.")
+                    st.error(f"❌ {mensaje_error}")
 
     # ── TAB: Crear Cuenta ────────────────────────────────────────────────
     with pestana_reg:
@@ -83,6 +83,15 @@ def pagina_login() -> None:
             reg_contra   = st.text_input("Contraseña *",         type="password", placeholder="••••••••")
             reg_contra2  = st.text_input("Confirmar contraseña *", type="password", placeholder="repite la contraseña")
 
+            st.markdown("---")
+            st.markdown("**Nivel de Seguridad Post-Cuántica**")
+            reg_nivel = st.selectbox(
+                "Algoritmo ML-DSA",
+                options=["ML_DSA_44", "ML_DSA_65", "ML_DSA_87"],
+                index=1,
+                help="Elige el tamaño de la matriz y parámetros. ML-DSA-44 es el más ligero, ML-DSA-87 el más fuerte."
+            )
+
             # Indicador visual de requisitos (solo si el campo tiene texto)
             if reg_contra:
                 st.markdown(html_fuerza_contrasena(reg_contra), unsafe_allow_html=True)
@@ -101,10 +110,10 @@ def pagina_login() -> None:
             if reg_contra != reg_contra2:
                 st.error("❌ Las contraseñas no coinciden.")
             else:
-                with st.spinner("Generando par de claves ML-DSA… puede tardar unos segundos."):
+                with st.spinner(f"Generando par de claves ({reg_nivel})… puede tardar unos segundos."):
                     exito, mensaje = registrar_usuario(
                         reg_usuario, reg_correo, reg_nombre,
-                        reg_nacimiento.isoformat(), reg_contra,
+                        reg_nacimiento.isoformat(), reg_contra, reg_nivel
                     )
                 if exito:
                     st.success(f"✅ {mensaje} Ya puedes iniciar sesión.")
@@ -115,16 +124,17 @@ def pagina_login() -> None:
     with pestana_recuperar:
 
         # ── PASO 3 — Éxito ───────────────────────────────────────────────
-        if st.session_state.otp_verificado:
+        if st.session_state.fase_recuperacion == 3:
             st.success("✅ Contraseña restablecida correctamente. Ya puedes iniciar sesión.")
             if st.button("← Volver al inicio de sesión", use_container_width=True):
+                st.session_state.fase_recuperacion = 1
                 st.session_state.otp_verificado = False
                 st.rerun()
 
         # ── PASO 2 — Introducir OTP + nueva contraseña ───────────────────
-        elif st.session_state.codigo_otp:
+        elif st.session_state.fase_recuperacion == 2:
             st.info(
-                f"📬 Hemos enviado un código de 6 dígitos a **{st.session_state.correo_otp}**. "
+                f"📬 Si el correo **{st.session_state.correo_otp}** está registrado, hemos enviado un código de 6 dígitos. "
                 "Introdúcelo aquí junto con tu nueva contraseña.",
                 icon="🔢",
             )
@@ -148,16 +158,14 @@ def pagina_login() -> None:
             if btn_verificar:
                 ahora    = datetime.datetime.utcnow()
                 expirado = (
-                    st.session_state.expiracion_otp is None
+                    not st.session_state.codigo_otp
+                    or st.session_state.expiracion_otp is None
                     or ahora > st.session_state.expiracion_otp
                 )
-                if expirado:
-                    st.error("❌ El código ha expirado (10 min). Solicita uno nuevo.")
-                    st.session_state.codigo_otp     = None
-                    st.session_state.expiracion_otp = None
-                    st.rerun()
-                elif input_otp.strip() != st.session_state.codigo_otp:
-                    st.error("❌ Código incorrecto. Comprueba el e-mail e inténtalo de nuevo.")
+                
+                # Si no se generó OTP real (correo no existía), siempre fallará aquí silenciosamente
+                if expirado or input_otp.strip() != st.session_state.codigo_otp:
+                    st.error("❌ Código incorrecto o expirado. Comprueba el e-mail e inténtalo de nuevo.")
                 elif nueva_contra != nueva_contra2:
                     st.error("❌ Las contraseñas no coinciden.")
                 else:
@@ -167,12 +175,14 @@ def pagina_login() -> None:
                         st.session_state.correo_otp     = None
                         st.session_state.expiracion_otp = None
                         st.session_state.otp_verificado = True
+                        st.session_state.fase_recuperacion = 3
                         st.rerun()
                     else:
                         st.error(f"❌ {mensaje}")
 
             st.markdown("---")
             if st.button("← No recibí el código — volver a solicitarlo", use_container_width=True):
+                st.session_state.fase_recuperacion = 1
                 st.session_state.codigo_otp     = None
                 st.session_state.correo_otp     = None
                 st.session_state.expiracion_otp = None
@@ -197,24 +207,47 @@ def pagina_login() -> None:
                 if not correo_recuperar:
                     st.warning("⚠️ Introduce tu e-mail.")
                 else:
-                    fila = obtener_usuario_por_correo(correo_recuperar)
-                    if not fila:
-                        # No revelamos si el e-mail existe (seguridad)
-                        st.success("Si ese e-mail está registrado, recibirás un código en breve.")
+                    import time
+                    from .auth import registrar_envio_otp
+                    
+                    ahora = datetime.datetime.utcnow()
+                    
+                    # 1. Rate limiting por sesión (prevenir clics rápidos)
+                    if st.session_state.bloqueo_solicitud_otp and ahora < st.session_state.bloqueo_solicitud_otp:
+                        st.error("Espera unos segundos antes de volver a solicitar un código.")
                     else:
-                        otp = f"{random.randint(0, 999999):06d}"
-                        with st.spinner("Enviando código…"):
-                            ok_correo, error = enviar_correo_otp(correo_recuperar, fila["usuario"], otp)
-                        if ok_correo:
-                            st.session_state.codigo_otp     = otp
-                            st.session_state.correo_otp     = correo_recuperar.strip().lower()
-                            st.session_state.expiracion_otp = (
-                                datetime.datetime.utcnow()
-                                + datetime.timedelta(minutes=10)
-                            )
-                            st.rerun()   # ← salta directamente al PASO 2
-                        else:
-                            st.error(f"❌ Error al enviar el correo: {error}")
+                        st.session_state.bloqueo_solicitud_otp = ahora + datetime.timedelta(seconds=30)
+                        
+                        correo_limpio = correo_recuperar.strip().lower()
+                        
+                        with st.spinner("Procesando solicitud..."):
+                            # Anti-enumeración: siempre hacemos una pausa artificial fija
+                            time.sleep(1.5) 
+                            
+                            fila = obtener_usuario_por_correo(correo_limpio)
+                            
+                            st.session_state.correo_otp = correo_limpio
+                            st.session_state.codigo_otp = None
+                            
+                            if fila:
+                                # 2. Rate limiting por correo en Base de Datos (ej. 2 minutos)
+                                enviar_real = True
+                                if fila["ultimo_otp_enviado"]:
+                                    ultimo_envio = datetime.datetime.fromisoformat(fila["ultimo_otp_enviado"])
+                                    if (ahora - ultimo_envio).total_seconds() < 120:  # 2 minutos
+                                        enviar_real = False
+                                
+                                if enviar_real:
+                                    otp = f"{random.randint(0, 999999):06d}"
+                                    ok_correo, error = enviar_correo_otp(correo_limpio, fila["usuario"], otp)
+                                    if ok_correo:
+                                        st.session_state.codigo_otp = otp
+                                        st.session_state.expiracion_otp = ahora + datetime.timedelta(minutes=10)
+                                        registrar_envio_otp(correo_limpio)
+                                        
+                            # Siempre avanzamos a la fase 2 para no dar pistas
+                            st.session_state.fase_recuperacion = 2
+                            st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +333,8 @@ def pagina_perfil() -> None:
 
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
-        c1.metric("Algoritmo", "ML-DSA-44")
+        nivel_usuario = fila["nivel_seguridad"] if "nivel_seguridad" in fila.keys() else "ML_DSA_65"
+        c1.metric("Algoritmo", nivel_usuario.replace("_", "-"))
         c2.metric("Clave pública", f"{len(bytes_cp)} B")
         c3.metric("Estándar", "FIPS 204")
 
@@ -444,12 +478,17 @@ def pagina_firmar() -> None:
 
         try:
             with st.spinner("Aplicando firma post-cuántica HashML-DSA…"):
-                firma_binaria = mldsa.hash_sign(bytes_cpr, pdf_subido.getvalue(), ph_algo=_ALGORITMO_PH, ctx=_CONTEXTO)
+                perfil = obtener_perfil_usuario(st.session_state.usuario)
+                nivel = perfil["nivel_seguridad"] if perfil and "nivel_seguridad" in perfil.keys() else "ML_DSA_65"
+                firma_binaria = mldsa.hash_sign(
+                    bytes_cpr, pdf_subido.getvalue(), ph_algo=_ALGORITMO_PH, ctx=_CONTEXTO, level=nivel
+                )
         except Exception as exc:
             st.error(f"❌ Error durante la firma: {exc}")
             return
 
         contenido_firma = construir_archivo_firma(firma_binaria, st.session_state.usuario, pdf_subido.name)
+        registrar_auditoria_por_usuario(st.session_state.usuario, "SIGNATURE_GENERATED", f"Documento: {pdf_subido.name}")
         st.success(f"✅ Documento firmado. Tamaño de firma: **{len(firma_binaria)} bytes**.")
 
         with st.expander("📄 Vista previa del archivo .sig", expanded=True):
@@ -513,15 +552,21 @@ def pagina_verificar() -> None:
             return
 
         datos_pdf = pdf_verificar.getvalue()
+        
+        perfil_firmante = obtener_perfil_usuario(nombre_firmante.strip())
+        nivel_firmante = perfil_firmante["nivel_seguridad"] if perfil_firmante and "nivel_seguridad" in perfil_firmante.keys() else "ML_DSA_65"
 
         try:
-            with st.spinner("Comprobando retículos criptográficos…"):
-                es_valida = mldsa.hash_verify(bytes_cp, datos_pdf, firma_binaria, ph_algo=_ALGORITMO_PH, ctx=_CONTEXTO)
+            with st.spinner(f"Comprobando retículos criptográficos ({nivel_firmante})…"):
+                es_valida = mldsa.hash_verify(
+                    bytes_cp, datos_pdf, firma_binaria, ph_algo=_ALGORITMO_PH, ctx=_CONTEXTO, level=nivel_firmante
+                )
         except Exception as exc:
             st.error(f"❌ Error técnico en la verificación: {exc}")
             return
 
         if es_valida:
+            registrar_auditoria_por_usuario(st.session_state.usuario, "SIGNATURE_VERIFIED", f"Documento: {pdf_verificar.name}, Firmante: {nombre_firmante.strip()}")
             st.success(
                 f"✅ **LA FIRMA ES VÁLIDA.** "
                 f"El documento fue firmado por **{nombre_firmante}** y no ha sido alterado."

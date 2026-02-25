@@ -26,54 +26,54 @@ class TestMLDSAInternal(unittest.TestCase):
         Prueba el camino feliz: Generación -> Firma -> Verificación.
         Debe retornar True.
         """
-        # 1. Generar Claves
-        pk, sk = keygen_internal(self.xi)
-        self.assertIsNotNone(pk)
-        self.assertIsNotNone(sk)
+        for level in ["ML_DSA_44", "ML_DSA_65", "ML_DSA_87"]:
+            with self.subTest(level=level):
+                pk, sk = keygen_internal(self.xi, level=level)
+                self.assertIsNotNone(pk)
+                self.assertIsNotNone(sk)
 
-        # 2. Firmar
-        sigma = sign_internal(sk, self.message, self.rnd)
-        self.assertIsNotNone(sigma)
+                sigma = sign_internal(sk, self.message, self.rnd, level=level)
+                self.assertIsNotNone(sigma)
 
-        # 3. Verificar
-        es_valida = verify_internal(pk, self.message, sigma)
-        self.assertTrue(es_valida, "La firma válida fue rechazada por el verificador.")
+                es_valida = verify_internal(pk, self.message, sigma, level=level)
+                self.assertTrue(es_valida, f"La firma válida fue rechazada ({level}).")
 
     def test_tampered_message_fails(self):
         """Prueba que si el mensaje cambia, la firma se vuelve inválida."""
-        pk, sk = keygen_internal(self.xi)
-        sigma = sign_internal(sk, self.message, self.rnd)
+        for level in ["ML_DSA_44", "ML_DSA_65", "ML_DSA_87"]:
+            with self.subTest(level=level):
+                pk, sk = keygen_internal(self.xi, level=level)
+                sigma = sign_internal(sk, self.message, self.rnd, level=level)
 
-        # Mensaje alterado
-        mensaje_falso = b"Este es un mensaje alterado"
-        es_valida = verify_internal(pk, mensaje_falso, sigma)
-        self.assertFalse(es_valida, "El sistema aceptó una firma para un mensaje modificado.")
+                mensaje_falso = b"Este es un mensaje alterado"
+                es_valida = verify_internal(pk, mensaje_falso, sigma, level=level)
+                self.assertFalse(es_valida, f"El sistema aceptó una firma para un mensaje modificado ({level}).")
 
     def test_tampered_signature_fails(self):
         """Prueba que si la firma cambia un solo bit, es rechazada."""
-        pk, sk = keygen_internal(self.xi)
-        sigma = sign_internal(sk, self.message, self.rnd)
+        for level in ["ML_DSA_44", "ML_DSA_65", "ML_DSA_87"]:
+            with self.subTest(level=level):
+                pk, sk = keygen_internal(self.xi, level=level)
+                sigma = sign_internal(sk, self.message, self.rnd, level=level)
 
-        # Alterar el primer byte de la firma (el compromiso c_tilde)
-        sigma_lista = bytearray(sigma)
-        sigma_lista[0] ^= 0xFF 
-        sigma_corrupta = bytes(sigma_lista)
+                sigma_lista = bytearray(sigma)
+                sigma_lista[0] ^= 0xFF 
+                sigma_corrupta = bytes(sigma_lista)
 
-        es_valida = verify_internal(pk, self.message, sigma_corrupta)
-        self.assertFalse(es_valida, "El sistema aceptó una firma corrupta.")
+                es_valida = verify_internal(pk, self.message, sigma_corrupta, level=level)
+                self.assertFalse(es_valida, f"El sistema aceptó una firma corrupta ({level}).")
 
     def test_different_keys_fail(self):
         """Prueba que una firma hecha con sk_A no valide con pk_B."""
-        # Generar dos pares de claves distintos
-        pk_a, sk_a = keygen_internal(os.urandom(32))
-        pk_b, sk_b = keygen_internal(os.urandom(32))
+        for level in ["ML_DSA_44", "ML_DSA_65", "ML_DSA_87"]:
+            with self.subTest(level=level):
+                pk_a, sk_a = keygen_internal(os.urandom(32), level=level)
+                pk_b, sk_b = keygen_internal(os.urandom(32), level=level)
 
-        # Firmar con la clave A
-        sigma_a = sign_internal(sk_a, self.message, self.rnd)
+                sigma_a = sign_internal(sk_a, self.message, self.rnd, level=level)
 
-        # Intentar verificar con la clave pública B
-        es_valida = verify_internal(pk_b, self.message, sigma_a)
-        self.assertFalse(es_valida, "Una firma de Alice fue validada con la clave de Bob.")
+                es_valida = verify_internal(pk_b, self.message, sigma_a, level=level)
+                self.assertFalse(es_valida, f"Una firma de Alice fue validada con la clave de Bob ({level}).")
 
 if __name__ == '__main__':
     # Temperatura 0: No queremos aleatoriedad en los errores, queremos precisión.

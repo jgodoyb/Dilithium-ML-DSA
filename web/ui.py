@@ -16,7 +16,7 @@ def renderizar_tarjeta_unificada() -> None:
                 margin-bottom:1.5rem;
                 box-shadow:0 0 40px rgba(94,234,212,0.07),0 8px 32px rgba(0,0,0,0.5);">
       <div style="font-size:3rem;line-height:1.2;">🛡️</div>
-      <div style="font-size:2.4rem;font-weight:700;margin:0.5rem 0 0.2rem;letter-spacing:0.5px;">Q-Proof Portal</div>
+      <div style="font-size:2.4rem;font-weight:700;margin:0.5rem 0 0.2rem;letter-spacing:0.5px;">Q-Proof Systems</div>
       <div style="opacity:0.65;font-size:0.95rem;margin:0 0 1rem;">Firma digital post-cuántica · Resistente a computación cuántica</div>
       <span style="display:inline-block;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.35);color:#5eead4;border-radius:999px;padding:3px 14px;font-size:0.78rem;margin:3px;">FIPS 204</span>
       <span style="display:inline-block;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.35);color:#5eead4;border-radius:999px;padding:3px 14px;font-size:0.78rem;margin:3px;">HashML-DSA</span>
@@ -66,10 +66,12 @@ def inicializar_estado_sesion() -> None:
         "clave_fernet":     None,
         "menu_activo":      "Dashboard",
         # flujo OTP de recuperación
+        "fase_recuperacion": 1,
         "codigo_otp":       None,   # str | None
         "correo_otp":       None,   # str | None
         "expiracion_otp":   None,   # datetime | None
         "otp_verificado":   False,
+        "bloqueo_solicitud_otp": None, # Limite por sesión
     }
     for clave, valor in valores_por_defecto.items():
         if clave not in st.session_state:

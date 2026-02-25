@@ -1,7 +1,7 @@
 import streamlit as st
 
 from .config import configurar_pagina
-from .db import inicializar_bd, migrar_bd
+from .db import inicializar_bd
 from .ui import inicializar_estado_sesion
 from .views import (
     pagina_login, pagina_dashboard, pagina_perfil,
@@ -14,7 +14,6 @@ def principal() -> None:
 
     # 2. Inicializar base de datos y estado de sesión
     inicializar_bd()
-    migrar_bd()
     inicializar_estado_sesion()
 
     # 3. Enrutamiento del contenido principal

@@ -26,15 +26,38 @@ CREATE TABLE IF NOT EXISTS usuarios (
     correo           TEXT UNIQUE NOT NULL,
     nombre_completo  TEXT NOT NULL,
     fecha_nacimiento TEXT NOT NULL,
-    hash_contrasena  TEXT NOT NULL,
-    sal              BLOB NOT NULL,
-    sal_correo       BLOB NOT NULL,
-    clave_publica_b64 TEXT NOT NULL,
-    clave_privada_enc BLOB NOT NULL,
-    cpr_correo_enc   BLOB NOT NULL,
     creado_en        TEXT NOT NULL DEFAULT (datetime('now')),
     foto_perfil      TEXT DEFAULT NULL,
     biografia        TEXT DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS credenciales (
+    usuario_id        INTEGER PRIMARY KEY,
+    nivel_seguridad   TEXT NOT NULL DEFAULT 'ML_DSA_65',
+    hash_contrasena   TEXT NOT NULL,
+    sal               BLOB NOT NULL,
+    sal_correo        BLOB NOT NULL,
+    clave_publica_b64 TEXT NOT NULL,
+    clave_privada_enc BLOB NOT NULL,
+    cpr_correo_enc    BLOB NOT NULL,
+    FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS seguridad_acceso (
+    usuario_id         INTEGER PRIMARY KEY,
+    intentos_fallidos  INTEGER NOT NULL DEFAULT 0,
+    bloqueado_hasta    TEXT DEFAULT NULL,
+    ultimo_otp_enviado TEXT DEFAULT NULL,
+    FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS auditoria_logs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id  INTEGER NOT NULL,
+    accion      TEXT NOT NULL,
+    detalles    TEXT DEFAULT NULL,
+    fecha_hora  TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 """
 
@@ -43,6 +66,8 @@ def obtener_conexion() -> sqlite3.Connection:
     if DB_PASSWORD:
         conexion.execute(f"PRAGMA key = '{DB_PASSWORD}';")
     conexion.row_factory = sqlite3.Row
+    # Habilitar claves foráneas
+    conexion.execute("PRAGMA foreign_keys = ON;")
     return conexion
 
 def inicializar_bd() -> None:
@@ -51,19 +76,4 @@ def inicializar_bd() -> None:
         conexion.executescript(_ESQUEMA_BD)
         conexion.commit()
 
-def migrar_bd() -> None:
-    """
-    Añade columnas nuevas a bases de datos ya existentes.
-    Ignora silenciosamente el error si la columna ya existe.
-    """
-    nuevas_columnas = [
-        "ALTER TABLE usuarios ADD COLUMN foto_perfil TEXT DEFAULT NULL",
-        "ALTER TABLE usuarios ADD COLUMN biografia TEXT DEFAULT NULL",
-    ]
-    with obtener_conexion() as conexion:
-        for sql in nuevas_columnas:
-            try:
-                conexion.execute(sql)
-            except Exception:
-                pass   # columna ya existe → OK
-        conexion.commit()
+
