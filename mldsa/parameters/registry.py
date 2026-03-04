@@ -14,7 +14,7 @@ ML_DSA_PARAMS = {
         "eta": 2,
         "omega": 80,
         "c_tilde_bytes": 32,
-        "oid": (2, 16, 840, 1, 101, 3, 4, 3, 17),
+        "oid": (2, 16, 840, 1, 101, 3, 4, 3, 17), # Este es el identificador del algoritmo en el OID - Object Identifier
     },
     "ML_DSA_65": {
         "d": 13,
