@@ -13,7 +13,6 @@ Este sistema implementa el estándar **ML-DSA (FIPS 204)**, garantizando que las
     *   Se cifran localmente utilizando **AES-128 (modo CBC a través de Fernet)**.
     *   La clave de cifrado se deriva de la contraseña del usuario utilizando el estándar robusto **PBKDF2-HMAC-SHA256** con más de 260,000 iteraciones (recomendación OWASP 2024).
 *   **Recuperación Segura de Cuenta:** Sistema de recuperación de claves basado en tokens vía correo electrónico (OTP), utilizando una copia de seguridad cifrada con una clave derivada del e-mail del usuario.
-*   **Interfaz de Usuario Moderna:** Interfaz web interactiva y accesible, construida sobre **Streamlit** (requiere versión >=1.30.0).
 
 ---
 
@@ -54,30 +53,11 @@ El sistema de correos requiere credenciales SMTP seguras. En la raíz del proyec
 
 *(Nota: El archivo `.env` está ignorado en Git por seguridad).*
 
-### 4. Ejecutar la Aplicación Web
-
-La aplicación de interfaz de usuario está desarrollada en Streamlit. Para levantar el servidor y abrir la aplicación en tu navegador, ejecuta el siguiente comando desde el directorio principal del proyecto:
-
-```bash
-streamlit run app_web.py
-```
-
-Esto abrirá por defecto una ventana en tu navegador en `http://localhost:8501`.
-
----
 
 ## 📁 Estructura del Proyecto
 
-*   `app_web.py`: Punto de entrada principal que inicializa e invoca el servidor Streamlit.
 *   `qproof_es.db`: Base de datos SQLite (generada automáticamente) que almacena de forma segura los usuarios, credenciales hasheadas y las claves privadas cifradas.
-*   `requirements.txt`: Archivo con las dependencias necesarias de bibliotecas Python (`streamlit`, `cryptography`, etc.).
-*   `web/`:
-    *   `main.py`: Rutas y lógica general de las pantallas en la interfaz de Streamlit.
-    *   `auth.py`: Lógica para autenticación de usuarios y generación de material criptográfico (manejo de Sal y derivación de base de datos).
-    *   `crypto.py`: Operaciones centralizadas de encriptación (Derivación PBKDF2, Hashes, Validaciones de contraseñas de alta entropía).
-    *   `db.py`: Conexión de SQLite e inicialización del esquema de la base de datos segura.
-    *   `email_sender.py`: Lógica para el envío de códigos OTP y correos de recuperación.
-    *   `views.py`, `config.py`, etc.: Vistas secundarias y configuraciones globales para Streamlit.
+*   `requirements.txt`: Archivo con las dependencias necesarias de bibliotecas Python (`cryptography`, etc.).
 *   `mldsa/`: Implementación core de matemáticas post-cuánticas bajo FIPS 204.
 
 ---
