@@ -1,6 +1,7 @@
 import os
 import base64
 import jwt
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+load_dotenv()
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")

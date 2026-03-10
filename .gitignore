@@ -1,0 +1,16 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Secretos y claves locales no deben subirse
+.env
+.env.*
+!.env.example
+
+# Archivos de python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
