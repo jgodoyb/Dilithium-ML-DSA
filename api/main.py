@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Permitir importar módulos desde el directorio raíz (como 'mldsa')
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import base64
 import jwt
 from dotenv import load_dotenv
@@ -14,7 +19,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8080", "http://localhost:8080/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -138,3 +143,7 @@ async def verify_document(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

@@ -13,4 +13,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Opcional: Específico de las carpetas locales (aunque __pycache__/ ya aplica a subdirectorios en git)
+mldsa/__pycache__/
+api/__pycache__/
+
+# Extensiones adicionales si existieran
 *.sqlite3
