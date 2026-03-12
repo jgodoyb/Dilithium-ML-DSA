@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from typing import Annotated
 
 from mldsa.mldsa import keygen, hash_sign, hash_verify
@@ -46,7 +46,7 @@ jwks_client = jwt.PyJWKClient(SUPABASE_JWKS_URL, cache_keys=True)
 
 async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, Security(security)]) -> dict:
     if ENVIRONMENT == "test":
-        return {"sub": "test-user-123", "aud": "authenticated"}
+        return {"payload": {"sub": "test-user-123", "aud": "authenticated"}, "token": "dummy-token"}
     
     token = credentials.credentials
     try:
@@ -57,7 +57,9 @@ async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, 
             algorithms=["ES256", "RS256"],
             audience="authenticated"
         )
-        return payload
+        # DEVOLVEMOS AMBAS COSAS AQUÍ
+        return {"payload": payload, "token": token} 
+        
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidAudienceError:
@@ -65,15 +67,19 @@ async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, 
     except jwt.InvalidTokenError as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
     except Exception as e:
-        print(f"Error interno en auth: {str(e)}") # Para ver el error real en la consola de tu servidor
+        print(f"Error interno en auth: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal authentication error")
 
 @app.post("/api/generate")
-async def generate_keys(token_payload: dict = Depends(get_current_user)):
+async def generate_keys(auth_data: dict = Depends(get_current_user)):
     try:
-        user_id = token_payload.get("sub")
+        payload = auth_data["payload"]
+        token = auth_data["token"]
+        
+        user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing subject claim")
+            
         pk, sk = keygen()
         
         pk_b64 = base64.b64encode(pk).decode('utf-8')
@@ -85,11 +91,15 @@ async def generate_keys(token_payload: dict = Depends(get_current_user)):
             "private_key": sk_b64
         }
         
-        # Inserción o actualización en Supabase
-        if supabase:
-            supabase.table("crypto_identities").upsert(data).execute()
+        # INYECCIÓN DEL CONTEXTO DE SEGURIDAD PARA EL RLS
+        options = ClientOptions(headers={"Authorization": f"Bearer {token}"})
+        user_supabase = create_client(SUPABASE_URL, SUPABASE_KEY, options=options)
+        
+        # Inserción usando el cliente efímero
+        user_supabase.table("crypto_identities").upsert(data).execute()
         
         return {"status": "success", "message": "Keys generated"}
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
