@@ -54,7 +54,7 @@ async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, 
         payload = jwt.decode(
             token,
             key=signing_key.key,
-            algorithms=["ES256", "RS256"],
+            algorithms=["ES256", "RS256"], #Mirar esto
             audience="authenticated"
         )
         # DEVOLVEMOS AMBAS COSAS AQUÍ
