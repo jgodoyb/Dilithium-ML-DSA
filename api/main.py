@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base64
 import jwt
 from dotenv import load_dotenv
+load_dotenv()  # Cargar .env ANTES de cualquier os.environ.get()
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-load_dotenv()
+# load_dotenv() ya fue llamado arriba al importar
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -60,14 +61,17 @@ async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, 
         # DEVOLVEMOS AMBAS COSAS AQUÍ
         return {"payload": payload, "token": token} 
         
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as e:
+        print(f"[AUTH DEBUG] Token expirado: {str(e)}")
         raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidAudienceError:
+    except jwt.InvalidAudienceError as e:
+        print(f"[AUTH DEBUG] Audiencia inválida: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid audience")
     except jwt.InvalidTokenError as e:
+        print(f"[AUTH DEBUG] Token inválido ({type(e).__name__}): {str(e)}")
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
     except Exception as e:
-        print(f"Error interno en auth: {str(e)}") 
+        print(f"[AUTH DEBUG] Error interno ({type(e).__name__}): {str(e)}")
         raise HTTPException(status_code=500, detail="Internal authentication error")
 
 @app.post("/api/generate")
