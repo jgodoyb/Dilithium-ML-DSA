@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import base64
 import jwt
+from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv()  # Cargar .env ANTES de cualquier os.environ.get()
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Security
@@ -56,7 +57,8 @@ async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, 
             token,
             key=signing_key.key,
             algorithms=["ES256", "RS256"], #Mirar esto
-            audience="authenticated"
+            audience="authenticated",
+            leeway=timedelta(seconds=10)  # Tolera hasta 10s de desincronización de reloj
         )
         # DEVOLVEMOS AMBAS COSAS AQUÍ
         return {"payload": payload, "token": token} 
