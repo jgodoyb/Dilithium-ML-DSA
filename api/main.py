@@ -83,6 +83,7 @@ async def generate_keys(auth_data: dict = Depends(get_current_user)):
         token = auth_data["token"]
         
         user_id = payload.get("sub")
+        email = payload.get("email") # Extraemos el email del token
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing subject claim")
             
@@ -93,6 +94,7 @@ async def generate_keys(auth_data: dict = Depends(get_current_user)):
         
         data = {
             "user_id": user_id,
+            "email": email,      # Guardamos el email para búsquedas en verificación
             "public_key": pk_b64,
             "private_key": sk_b64
         }
@@ -112,67 +114,58 @@ async def generate_keys(auth_data: dict = Depends(get_current_user)):
 @app.post("/api/sign")
 async def sign_document(
     file: UploadFile = File(...),
+    private_key: str = Form(...),  # Recibe la clave del Front
     token_payload: dict = Depends(get_current_user)
 ):
     try:
-        user_id = token_payload.get("sub")
+        user_id = token_payload["payload"].get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing subject claim")
-        if not supabase:
-            raise HTTPException(status_code=500, detail="Supabase client not initialized")
             
-        response = supabase.table("crypto_identities").select("private_key").eq("user_id", user_id).execute()
-        
-        if not response.data or len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="Private key not found for user")
-            
-        sk_b64 = response.data[0]["private_key"]
-        sk_bytes = base64.b64decode(sk_b64)
+        # Decodificamos la clave que mandó el front directamente
+        sk_bytes = base64.b64decode(private_key)
         
         pdf_bytes = await file.read()
         
+        # Generar firma
         signature_bytes = hash_sign(sk=sk_bytes, M=pdf_bytes, ph_algo="SHA-256", ctx=b"Q-Proof")
         signature_b64 = base64.b64encode(signature_bytes).decode('utf-8')
         
         return {"signature_b64": signature_b64}
         
-    except HTTPException:
-        raise
     except Exception as e:
+        print(f"[SIGN ERROR]: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/verify")
 async def verify_document(
     file: UploadFile = File(...),
-    signature_b64: str = Form(...),
-    author_id: str = Form(...),
+    signature: UploadFile = File(...), # Recibe el archivo .sig
+    public_key: str = Form(...),        # Recibe la clave del autor desde el front
     token_payload: dict = Depends(get_current_user)
 ):
     try:
-        user_id = token_payload.get("sub")
+        user_id = token_payload["payload"].get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing subject claim")
-        if not supabase:
-            raise HTTPException(status_code=500, detail="Supabase client not initialized")
             
-        response = supabase.table("crypto_identities").select("public_key").eq("user_id", author_id).execute()
+        # Decodificamos la clave pública (Base64 -> Bytes)
+        pk_bytes = base64.b64decode(public_key)
         
-        if not response.data or len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="Public key not found for author")
-            
-        pk_b64 = response.data[0]["public_key"]
-        pk_bytes = base64.b64decode(pk_b64)
+        # Leemos la firma (Bytes del archivo .sig)
+        signature_bytes = await signature.read()
         
-        signature_bytes = base64.b64decode(signature_b64)
+        # Leemos el PDF
         pdf_bytes = await file.read()
         
+        # Verificar integridad
         is_valid = hash_verify(pk=pk_bytes, M=pdf_bytes, sigma=signature_bytes, ph_algo="SHA-256", ctx=b"Q-Proof")
         
         return {"is_valid": is_valid}
         
-    except HTTPException:
-        raise
     except Exception as e:
+        print(f"[VERIFY ERROR]: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
