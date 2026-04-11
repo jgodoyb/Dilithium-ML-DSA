@@ -9,7 +9,10 @@ import jwt
 from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv()  # Cargar .env ANTES de cualquier os.environ.get()
-from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Security
+from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Security, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client, ClientOptions
@@ -18,6 +21,11 @@ from typing import Annotated
 from mldsa.mldsa import keygen, hash_sign, hash_verify
 
 app = FastAPI()
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Procesar orígenes permitidos desde el .env (soporta múltiples separados por coma)
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "")
@@ -114,15 +122,27 @@ async def generate_keys(auth_data: dict = Depends(get_current_user)):
 @app.post("/api/sign")
 async def sign_document(
     file: UploadFile = File(...),
-    private_key: str = Form(...),  # Recibe la clave del Front
     token_payload: dict = Depends(get_current_user)
 ):
     try:
         user_id = token_payload["payload"].get("sub")
+        token = token_payload["token"]
+        
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing subject claim")
             
-        # Decodificamos la clave que mandó el front directamente
+        # Inyecta seguridad: cliente autenticado de Supabase para RLS
+        options = ClientOptions(headers={"Authorization": f"Bearer {token}"})
+        user_supabase = create_client(SUPABASE_URL, SUPABASE_KEY, options=options)
+        
+        # Obtener clave de forma segura del servidor
+        res = user_supabase.table("crypto_identities").select("private_key").eq("user_id", user_id).single().execute()
+        if not res.data or "private_key" not in res.data:
+            raise HTTPException(status_code=404, detail="Private key not found")
+            
+        private_key = res.data["private_key"]
+        
+        # Decodificamos la clave obtenida localmente
         sk_bytes = base64.b64decode(private_key)
         
         pdf_bytes = await file.read()
@@ -139,17 +159,14 @@ async def sign_document(
 
 
 @app.post("/api/verify")
+@limiter.limit("10/minute")
 async def verify_document(
+    request: Request,
     file: UploadFile = File(...),
     signature: UploadFile = File(...), # Recibe el archivo .sig
-    public_key: str = Form(...),        # Recibe la clave del autor desde el front
-    token_payload: dict = Depends(get_current_user)
+    public_key: str = Form(...)        # Recibe la clave del autor desde el front
 ):
     try:
-        user_id = token_payload["payload"].get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token missing subject claim")
-            
         # Decodificamos la clave pública (Base64 -> Bytes)
         pk_bytes = base64.b64decode(public_key)
         
