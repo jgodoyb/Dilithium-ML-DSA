@@ -1,85 +1,90 @@
-# Q-Proof System
+# Dilithium-ML-DSA (FIPS 204 Cryptographic Core)
 
-Bienvenido a **Q-Proof System**, una aplicación de vanguardia diseñada para la firma digital de documentos y la verificación de identidad utilizando criptografía **Post-Cuántica**. 
+Este repositorio contiene una implementación limpia y modular en Python del estándar **ML-DSA (FIPS 204)**, el algoritmo de firma digital post-cuántica seleccionado por el NIST. 
 
-Este sistema implementa el estándar **ML-DSA (FIPS 204)**, garantizando que las firmas digitales producidas sean resistentes incluso a ataques de futuros ordenadores cuánticos.
+La biblioteca ha sido desarrollada **desde cero y posee cero dependencias externas**, utilizando únicamente los módulos provistos por la biblioteca estándar de Python (como `hashlib` y `os.urandom`), lo que garantiza la ausencia de vulnerabilidades de cadena de suministro y facilita su auditoría.
+
+---
 
 ## ✨ Características Principales
 
-*   **Criptografía Post-Cuántica Integrada:** Implementación nativa en Python del algoritmo de firma digital ML-DSA basado en retículos (Lattice-based cryptography).
-*   **Gestión Segura de Identidades:** Registro de usuarios, inicio de sesión seguro y gestión de perfiles.
-*   **Almacenamiento Local Seguro de Claves:** 
-    *   Las claves privadas **nunca** se almacenan en texto plano. 
-    *   Se cifran localmente utilizando **AES-128 (modo CBC a través de Fernet)**.
-    *   La clave de cifrado se deriva de la contraseña del usuario utilizando el estándar robusto **PBKDF2-HMAC-SHA256** con más de 260,000 iteraciones (recomendación OWASP 2024).
-*   **Recuperación Segura de Cuenta:** Sistema de recuperación de claves basado en tokens vía correo electrónico (OTP), utilizando una copia de seguridad cifrada con una clave derivada del e-mail del usuario.
-*   **Interfaz de Usuario Moderna:** Interfaz web interactiva y accesible, construida sobre **Streamlit** (requiere versión >=1.30.0).
+*   **Algoritmo Post-Cuántico Puro:** Implementación nativa basada en retículos estructurados del algoritmo de firma digital ML-DSA bajo el estándar oficial FIPS 204.
+*   **Parámetros Oficiales Integrados:** Soporte completo de los conjuntos de parámetros estándar definidos en el FIPS 204:
+    *   **ML-DSA-44** (Nivel de seguridad 2)
+    *   **ML-DSA-65** (Nivel de seguridad 3, por defecto)
+    *   **ML-DSA-87** (Nivel de seguridad 5)
+*   **Modos Soportados:**
+    *   **ML-DSA (Puro):** Firma directa del mensaje con separación de dominio.
+    *   **HashML-DSA (Pre-Hash):** Firma de resúmenes de mensajes para optimizar el rendimiento con grandes volúmenes de datos. Soporta **SHA-256**, **SHA-512** y **SHAKE128** (256 bits).
+*   **Separación de Dominios (Contexto):** Soporte estricto de contextos (`ctx`) de hasta 255 bytes en la generación de firmas, proporcionando una sólida protección contra ataques de colisión y confusión de dominio entre aplicaciones.
+*   **Cero Dependencias de Terceros:** Corre de forma autónoma en cualquier entorno de Python 3.10 o superior sin necesidad de instalar librerías externas.
 
 ---
 
-## 🔒 Arquitectura de Seguridad
+## 📁 Estructura de Módulos
 
-La seguridad de datos en reposo es una prioridad en Q-Proof System. El esquema de base de datos protege fuertemente todas las credenciales:
+El código criptográfico está estructurado de forma modular y pedagógica según los algoritmos detallados en la especificación FIPS 204:
 
-1.  **Contraseñas:** No se guardan. Se genera y almacena un Hash irreversíble usando SHA-256 junto con una **Sal (Salt)** aleatoria de 16 bytes.
-2.  **Claves Privadas (Firma):** Se cifran con la contraseña del usuario. Si la base de datos es extraída ilegítimamente, las claves privadas son inútiles sin conocer las contraseñas exactas de cada usuario.
-3.  **Claves Públicas:** Almacenadas en formato Base64 para facilitar su distribución y utilización en los procesos de verificación pública.
+*   `mldsa/`:
+    *   `mldsa.py`: Interfaz principal pública (expone `keygen`, `sign`, `verify`, `hash_sign`, `hash_verify`).
+    *   `constants.py`: Constantes universales del anillo y del módulo (Q = 8380417, N = 256).
+    *   `parameters/`: Diccionario de parámetros oficiales (k, l, eta, gamma1, gamma2, etc.) y selector de nivel de seguridad.
+    *   `core/`: Implementación de algoritmos de bajo nivel (`keygen_internal`, `sign_internal`, `verify_internal`).
+    *   `crypto/`: Funciones hash auxiliares basadas en SHAKE-128 y SHAKE-256 (según FIPS 202).
+    *   `decomposition/`: Operaciones de redondeo y descomposición de coeficientes (`Power2Round`, `Decompose`, `HighBits`, `LowBits`, `MakeHint`, `UseHint`).
+    *   `encoding/`: Codificación y empaquetado de bits (`BitPack`, `BitUnpack`, empaquetado de pistas/hints y serialización de firmas y claves).
+    *   `ntt/`: Aritmética polinomial rápida basada en la Transformación Teórica de Números (NTT).
+    *   `primitives/`: Conversiones básicas de tipos (Integer a Bytes, Bits a Bytes, etc.).
+    *   `sampling/`: Algoritmos de muestreo determinista y rechazo (`SampleInBall`, `RejNTTPoly`, `RejBoundedPoly`, `ExpandMask`, `ExpandA`, `ExpandS`).
+    *   `arbol_dependencias_mldsa.md`: Documento técnico detallado que mapea las funciones, su nivel de dependencia matemática y su relación con los algoritmos del estándar.
+*   `tests/`: Amplia suite de pruebas unitarias que validan la correctitud aritmética y lógica de cada sección (NTT, empaquetado, redondeo, muestreo y API pública).
 
 ---
 
-## 🚀 Instalación y Ejecución
+## 🚀 Instalación y Uso
 
-### 1. Requisitos Previos
+### 1. Requisitos
+*   **Python 3.10** o superior instalado.
+*   No requiere ningún paso de compilación ni instalación de dependencias externas.
 
-Asegúrate de tener instalado **Python 3.10** o superior en tu sistema.
+### 2. Uso Básico (Ejemplo)
 
-### 2. Instalación de Dependencias
+```python
+import base64
+from mldsa import keygen, sign, verify, hash_sign, hash_verify
 
-Se recomienda la creación de un entorno virtual (venv o conda) antes de instalar las dependencias.
+# 1. Generación de claves (Nivel por defecto: ML-DSA-65)
+public_key, private_key = keygen()
 
-```bash
-# Clonar o descargar el repositorio e ir a la carpeta principal
-cd "Q-Proof System"
+mensaje = b"Mensaje confidencial para firma digital"
+contexto = b"Contexto de la aplicacion"
 
-# Instalar los paquetes requeridos
-pip install -r requirements.txt
+# --- Variante Pura ---
+# Generar Firma
+firma = sign(private_key, mensaje, ctx=contexto)
+
+# Verificar Firma
+valido = verify(public_key, mensaje, firma, ctx=contexto)
+print(f"Verificación Firma Pura: {valido}")  # True
+
+# --- Variante Pre-Hash (HashML-DSA con SHA-256) ---
+firma_hash = hash_sign(private_key, mensaje, ph_algo="SHA-256", ctx=contexto)
+valido_hash = hash_verify(public_key, mensaje, firma_hash, ph_algo="SHA-256", ctx=contexto)
+print(f"Verificación Firma Pre-Hash: {valido_hash}")  # True
 ```
 
-### 3. Configurar Variables de Entorno
+---
 
-El sistema de correos requiere credenciales SMTP seguras. En la raíz del proyecto encontrarás un archivo llamado `.env.example`.
+## 🧪 Pruebas Unitarias
 
-1. Crea una copia de `.env.example` y renómbrala a `.env`.
-2. Abre el nuevo archivo `.env` y sustituye los valores de `QPROOF_SMTP_USER` y `QPROOF_SMTP_PASS` por tus credenciales reales (recomendamos usar *Contraseñas de Aplicación* de Google).
-
-*(Nota: El archivo `.env` está ignorado en Git por seguridad).*
-
-### 4. Ejecutar la Aplicación Web
-
-La aplicación de interfaz de usuario está desarrollada en Streamlit. Para levantar el servidor y abrir la aplicación en tu navegador, ejecuta el siguiente comando desde el directorio principal del proyecto:
+Para ejecutar el set completo de pruebas unitarias y verificar la correctitud de todos los componentes del núcleo criptográfico:
 
 ```bash
-streamlit run app_web.py
+python -m unittest discover -s tests -p "*.py"
 ```
 
-Esto abrirá por defecto una ventana en tu navegador en `http://localhost:8501`.
-
 ---
 
-## 📁 Estructura del Proyecto
+## 📄 Licencia
 
-*   `app_web.py`: Punto de entrada principal que inicializa e invoca el servidor Streamlit.
-*   `qproof_es.db`: Base de datos SQLite (generada automáticamente) que almacena de forma segura los usuarios, credenciales hasheadas y las claves privadas cifradas.
-*   `requirements.txt`: Archivo con las dependencias necesarias de bibliotecas Python (`streamlit`, `cryptography`, etc.).
-*   `web/`:
-    *   `main.py`: Rutas y lógica general de las pantallas en la interfaz de Streamlit.
-    *   `auth.py`: Lógica para autenticación de usuarios y generación de material criptográfico (manejo de Sal y derivación de base de datos).
-    *   `crypto.py`: Operaciones centralizadas de encriptación (Derivación PBKDF2, Hashes, Validaciones de contraseñas de alta entropía).
-    *   `db.py`: Conexión de SQLite e inicialización del esquema de la base de datos segura.
-    *   `email_sender.py`: Lógica para el envío de códigos OTP y correos de recuperación.
-    *   `views.py`, `config.py`, etc.: Vistas secundarias y configuraciones globales para Streamlit.
-*   `mldsa/`: Implementación core de matemáticas post-cuánticas bajo FIPS 204.
-
----
-
-**Nota:** Q-Proof System es un sistema de grado de investigación/estudio de la criptografía moderna aplicable. Usa la capa de transporte seguro (HTTPS) en entornos de producción.
+Este proyecto está diseñado con fines de investigación académica y estudio de la criptografía moderna post-cuántica.

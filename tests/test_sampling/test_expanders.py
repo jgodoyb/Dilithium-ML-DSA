@@ -9,7 +9,8 @@ if ruta_raiz not in sys.path:
 
 from mldsa.sampling.expanders import expand_a, expand_s
 from mldsa.constants import Q
-from mldsa.parameters.mldsa65 import ML_DSA_65
+from mldsa.parameters import ML_DSA_PARAMS
+ML_DSA_65 = ML_DSA_PARAMS["ML_DSA_65"]
 
 class TestExpanders(unittest.TestCase):
 

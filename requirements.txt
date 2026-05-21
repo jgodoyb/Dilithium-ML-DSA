@@ -1,20 +1,9 @@
 # ==========================================
-# Q-Proof System - Dependencias del Proyecto
+# Dilithium-ML-DSA - Dependencias
 # ==========================================
-
-# --- Interfaz de Usuario y Servidor Web ---
-streamlit>=1.30.0
-
-# --- Criptografía Básica (KDF, AES-GCM vía Fernet) ---
-# Se utiliza para derivación de contraseñas y cifrado de claves locales
-cryptography>=42.0.0
-
-# --- Criptografía Post-Cuántica (ML-DSA / FIPS 204) ---
-# (Implementación local en el módulo 'mldsa', basada
-# estrictamente en la biblioteca estándar de Python)
-
-# --- Gestión de Entorno (Credenciales Seguras) ---
-python-dotenv>=1.0.0
-
-# --- Base de Datos Cifrada ---
-sqlcipher3>=0.6.0
+#
+# El núcleo criptográfico ML-DSA (FIPS 204) está desarrollado usando
+# exclusivamente la biblioteca estándar de Python (hashlib, os, etc.).
+# No requiere la instalación de ninguna librería de terceros para funcionar.
+#
+# Solo necesitas tener instalado Python >= 3.10.
