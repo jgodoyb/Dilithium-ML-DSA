@@ -1,65 +1,125 @@
-# Q-Proof System
+# Q-Proof Cryptographic Core (ML-DSA / FIPS 204)
 
-Bienvenido a **Q-Proof System**, una aplicación de vanguardia diseñada para la firma digital de documentos y la verificación de identidad utilizando criptografía **Post-Cuántica**. 
+Este repositorio contiene la implementación e integración de **Q-Proof Core**, una API de firma digital de documentos y verificación basada en criptografía **Post-Cuántica**. 
 
-Este sistema implementa el estándar **ML-DSA (FIPS 204)**, garantizando que las firmas digitales producidas sean resistentes incluso a ataques de futuros ordenadores cuánticos.
+El sistema implementa de forma nativa desde cero el estándar **ML-DSA (FIPS 204)**, garantizando que las firmas digitales producidas sean resistentes a ataques mediante ordenadores cuánticos convencionales y futuros (mediante criptografía basada en retículos estructurados).
+
+---
 
 ## ✨ Características Principales
 
-*   **Criptografía Post-Cuántica Integrada:** Implementación nativa en Python del algoritmo de firma digital ML-DSA basado en retículos (Lattice-based cryptography).
-*   **Gestión Segura de Identidades:** Registro de usuarios, inicio de sesión seguro y gestión de perfiles.
-*   **Almacenamiento Local Seguro de Claves:** 
-    *   Las claves privadas **nunca** se almacenan en texto plano. 
-    *   Se cifran localmente utilizando **AES-128 (modo CBC a través de Fernet)**.
-    *   La clave de cifrado se deriva de la contraseña del usuario utilizando el estándar robusto **PBKDF2-HMAC-SHA256** con más de 260,000 iteraciones (recomendación OWASP 2024).
-*   **Recuperación Segura de Cuenta:** Sistema de recuperación de claves basado en tokens vía correo electrónico (OTP), utilizando una copia de seguridad cifrada con una clave derivada del e-mail del usuario.
+*   **Algoritmo Post-Cuántico Nativo:** Implementación completa y modular en Python del estándar **FIPS 204 (ML-DSA)**, soportando niveles de seguridad estándar como **ML-DSA-65**.
+*   **Variantes Pura y Pre-Hash:**
+    *   **ML-DSA Puro:** Firma directa del mensaje/documento con separación de dominios mediante contexto.
+    *   **HashML-DSA:** Variante Pre-Hash compatible con funciones de resumen como **SHA-256**, **SHA-512** y **SHAKE128** (256 bits).
+*   **Separación de Dominios (Contexto):** Validación estricta del parámetro opcional `ctx` (límite de 255 bytes) para prevenir ataques de colisión de firmas entre diferentes aplicaciones.
+*   **API Backend Moderna:** Desarrollada con **FastAPI** para una integración web ágil, segura y asíncrona.
+*   **Integración Segura con Supabase:** 
+    *   Las identidades criptográficas (clave pública y clave privada cifrada) se almacenan en la nube utilizando **Supabase**.
+    *   Seguridad basada en **RLS (Row Level Security)**: el backend inyecta dinámicamente el token JWT del usuario autenticado en el cliente de Supabase para asegurar que un usuario solo pueda leer o escribir sus propias claves.
+*   **Mitigación de Abuso:** Rate limiting (límite de peticiones) integrado a nivel de endpoint mediante **SlowAPI** para prevenir ataques de denegación de servicio (DoS) en operaciones criptográficas pesadas.
 
 ---
 
-## 🔒 Arquitectura de Seguridad
+## 🔒 Arquitectura de Seguridad y Flujo de Datos
 
-La seguridad de datos en reposo es una prioridad en Q-Proof System. El esquema de base de datos protege fuertemente todas las credenciales:
-
-1.  **Contraseñas:** No se guardan. Se genera y almacena un Hash irreversíble usando SHA-256 junto con una **Sal (Salt)** aleatoria de 16 bytes.
-2.  **Claves Privadas (Firma):** Se cifran con la contraseña del usuario. Si la base de datos es extraída ilegítimamente, las claves privadas son inútiles sin conocer las contraseñas exactas de cada usuario.
-3.  **Claves Públicas:** Almacenadas en formato Base64 para facilitar su distribución y utilización en los procesos de verificación pública.
+1.  **Generación de Claves (`/api/generate`):**
+    *   Se genera un par de claves ML-DSA localmente en el servidor.
+    *   La clave pública y privada se codifican en Base64 y se guardan directamente en la tabla `crypto_identities` de Supabase bajo el contexto del JWT del usuario.
+2.  **Firma de Documentos (`/api/sign`):**
+    *   El usuario sube el documento PDF.
+    *   El servidor recupera la clave privada de Supabase de forma segura (validando el JWT del usuario contra la base de datos).
+    *   La clave privada nunca se expone al cliente web.
+    *   Se genera la firma digital utilizando la variante Pre-Hash y se devuelve codificada en Base64.
+3.  **Verificación Pública (`/api/verify`):**
+    *   Cualquier tercero puede verificar la autenticidad del documento sin necesidad de estar logueado.
+    *   Se envía el PDF original, la firma digital (`.sig`) y la clave pública en Base64 del autor.
+    *   El servidor realiza la verificación localmente de manera limpia y devuelve un valor booleano (`is_valid`).
 
 ---
 
-## 🚀 Instalación y Ejecución
+## 📁 Estructura del Proyecto
+
+*   `api/`:
+    *   `main.py`: Servidor FastAPI con los endpoints de generación, firma y verificación.
+    *   `test_api.py`: Suite de pruebas automatizadas para simular el comportamiento de la API y validar el flujo completo.
+*   `mldsa/`:
+    *   `mldsa.py`: Punto de entrada del módulo criptográfico (expone `keygen`, `sign`, `verify`, `hash_sign`, `hash_verify`).
+    *   `constants.py`: Constantes globales del estándar (Q = 8380417, N = 256).
+    *   `parameters/`: Definición y registro de parámetros estándar (ML-DSA-44, 65, 87) según FIPS 204.
+    *   `core/`, `crypto/`, `decomposition/`, `encoding/`, `ntt/`, `sampling/`, `primitives/`: Módulos matemáticos internos (aritmética polinomial, Transformación Teórica de Números - NTT, empaquetado de bits y muestreo).
+    *   `arbol_dependencias_mldsa.md`: Documentación detallada del orden matemático y dependencias de la biblioteca criptográfica.
+*   `tests/`: Suite completa de pruebas unitarias dividida por componentes matemáticos y criptográficos.
+*   `requirements.txt`: Dependencias de librerías Python necesarias.
+
+---
+
+## 🚀 Instalación y Configuración
 
 ### 1. Requisitos Previos
 
 Asegúrate de tener instalado **Python 3.10** o superior en tu sistema.
 
-### 2. Instalación de Dependencias
+### 2. Clonar e Instalar Dependencias
 
-Se recomienda la creación de un entorno virtual (venv o conda) antes de instalar las dependencias.
+Clona este repositorio, crea un entorno virtual e instala los paquetes requeridos:
 
 ```bash
-# Clonar o descargar el repositorio e ir a la carpeta principal
-cd "Q-Proof System"
+# Crear entorno virtual
+python -m venv venv
 
-# Instalar los paquetes requeridos
+# Activar entorno virtual
+# En Windows:
+.\venv\Scripts\activate
+# En macOS/Linux:
+source venv/bin/activate
+
+# Instalar dependencias
 pip install -r requirements.txt
 ```
 
-### 3. Configurar Variables de Entorno
+### 3. Variables de Entorno (`.env`)
 
-El sistema de correos requiere credenciales SMTP seguras. En la raíz del proyecto encontrarás un archivo llamado `.env.example`.
+El backend requiere credenciales válidas de Supabase. A partir del archivo de plantilla `.env.example`, crea tu configuración:
 
-1. Crea una copia de `.env.example` y renómbrala a `.env`.
-2. Abre el nuevo archivo `.env` y sustituye los valores de `QPROOF_SMTP_USER` y `QPROOF_SMTP_PASS` por tus credenciales reales (recomendamos usar *Contraseñas de Aplicación* de Google).
+1.  Copia `.env.example` y renómbralo a `.env`.
+2.  Configura las siguientes variables:
+    *   `ENVIRONMENT`: `development` o `production` (usa `test` para pruebas locales).
+    *   `FRONTEND_URL`: URL(s) permitidas para CORS (ej: `http://localhost:8080`).
+    *   `SUPABASE_URL`: Endpoint de tu proyecto en Supabase.
+    *   `SUPABASE_KEY`: Clave pública anónima (`anon` key) de Supabase.
+    *   `SUPABASE_JWKS_URL`: URL del endpoint JWKS de tu proyecto de Supabase (usado para verificar las firmas de los tokens JWT de forma local, ej. `https://<tu-id>.supabase.co/auth/v1/.well-known/jwks.json`).
 
-*(Nota: El archivo `.env` está ignorado en Git por seguridad).*
+*(Nota: El archivo `.env` está ignorado en Git por motivos de seguridad para evitar la filtración de credenciales reales).*
 
+### 4. Ejecución del Servidor
 
-## 📁 Estructura del Proyecto
+Para iniciar la API localmente en modo desarrollo con recarga automática:
 
-*   `qproof_es.db`: Base de datos SQLite (generada automáticamente) que almacena de forma segura los usuarios, credenciales hasheadas y las claves privadas cifradas.
-*   `requirements.txt`: Archivo con las dependencias necesarias de bibliotecas Python (`cryptography`, etc.).
-*   `mldsa/`: Implementación core de matemáticas post-cuánticas bajo FIPS 204.
+```bash
+python api/main.py
+```
+
+La API estará disponible en `http://127.0.0.1:8000` y podrás visualizar la documentación interactiva en `http://127.0.0.1:8000/docs`.
 
 ---
 
-**Nota:** Q-Proof System es un sistema de grado de investigación/estudio de la criptografía moderna aplicable. Usa la capa de transporte seguro (HTTPS) en entornos de producción.
+## 🧪 Pruebas Unitarias y de Integración
+
+El repositorio cuenta con pruebas que cubren tanto los fundamentos matemáticos de ML-DSA como el comportamiento de la API.
+
+### Ejecutar pruebas criptográficas (unitarias):
+```bash
+python -m unittest discover -s tests -p "*.py"
+```
+
+### Ejecutar pruebas de la API (flujo completo mockeado):
+```bash
+python -m api.test_api
+```
+
+---
+
+## 📄 Licencia
+
+Este proyecto está diseñado con fines de investigación académica y estudio de la criptografía post-cuántica aplicable.

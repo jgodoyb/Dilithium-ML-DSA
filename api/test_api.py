@@ -29,6 +29,7 @@ def mock_execute_upsert(data):
 # Setup Supabase Mock
 mock_supabase = MagicMock()
 api.main.supabase = mock_supabase
+api.main.create_client = MagicMock(return_value=mock_supabase)
 
 def setup_mock_db():
     class TableMock:
@@ -90,8 +91,12 @@ def test_flow():
     sk_b64 = base64.b64encode(sk).decode("utf-8")
     
     # Creamos un mock con una respuesta específica para la clave privada
+    mock_execute_priv = MagicMock()
+    mock_execute_priv.data = {"private_key": sk_b64}
+    mock_single_priv = MagicMock()
+    mock_single_priv.execute.return_value = mock_execute_priv
     mock_eq_priv = MagicMock()
-    mock_eq_priv.execute.return_value.data = [{"private_key": sk_b64}]
+    mock_eq_priv.single.return_value = mock_single_priv
     mock_select_priv = MagicMock()
     mock_select_priv.eq.return_value = mock_eq_priv
     
@@ -108,21 +113,17 @@ def test_flow():
     sig_b64 = res_sign.json()["signature_b64"]
     print("Sign API [OK]: Signature generated successfully")
     
-    # Creamos un mock con una respuesta específica para la clave pública
-    mock_eq_pub = MagicMock()
-    mock_eq_pub.execute.return_value.data = [{"public_key": pk_b64}]
-    mock_select_pub = MagicMock()
-    mock_select_pub.eq.return_value = mock_eq_pub
-    
     # 3. Test Verify
-    mock_table.select.return_value = mock_select_pub
-    
+    sig_bytes = base64.b64decode(sig_b64)
     with open("test.pdf", "rb") as f:
         res_verify = client.post(
             "/api/verify", 
             headers=auth_headers, 
-            files={"file": ("test.pdf", f, "application/pdf")},
-            data={"signature_b64": sig_b64, "author_id": "test-user-123"}
+            files={
+                "file": ("test.pdf", f, "application/pdf"),
+                "signature": ("signature.sig", sig_bytes, "application/octet-stream")
+            },
+            data={"public_key": pk_b64}
         )
         
     assert res_verify.status_code == 200, res_verify.text

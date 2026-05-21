@@ -11,7 +11,8 @@ if ruta_raiz not in sys.path:
 from mldsa.encoding.complex_structures import hint_bit_pack, hint_bit_unpack, w1_encode
 from mldsa.constants import Q
 # IMPORTAMOS LOS PARÁMETROS DESDE TU DICCIONARIO
-from mldsa.parameters.mldsa65 import ML_DSA_65
+from mldsa.parameters import ML_DSA_PARAMS
+ML_DSA_65 = ML_DSA_PARAMS["ML_DSA_65"]
 
 class TestComplexStructures(unittest.TestCase):
 

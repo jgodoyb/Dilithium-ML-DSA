@@ -9,7 +9,8 @@ if ruta_raiz not in sys.path:
 
 from mldsa.sampling.samplers import sample_in_ball, rej_ntt_poly, rej_bounded_poly, expand_mask
 from mldsa.constants import Q
-from mldsa.parameters.mldsa65 import ML_DSA_65
+from mldsa.parameters import ML_DSA_PARAMS
+ML_DSA_65 = ML_DSA_PARAMS["ML_DSA_65"]
 
 class TestSamplers(unittest.TestCase):
 
